@@ -11,6 +11,7 @@ type RateLimitBucket = {
 	allowed?: boolean;
 	limit_reached?: boolean;
 	primary_window?: UsageWindow | null;
+	secondary_window?: UsageWindow | null;
 };
 
 type CodexUsageResponse = {
@@ -20,6 +21,7 @@ type CodexUsageResponse = {
 
 type UsageSnapshot = {
 	fiveHourLeftPercent: number | null;
+	weeklyLeftPercent: number | null;
 };
 
 const EXTENSION_ID = "codex-usage";
@@ -46,12 +48,16 @@ function usedToLeftPercent(value: number | null | undefined): number | null {
 	return clampPercent(100 - value);
 }
 
-function formatLeftPercent(valueLeft: number | null): string {
+function formatPercentValue(valueLeft: number | null): string {
 	if (typeof valueLeft !== "number" || Number.isNaN(valueLeft)) {
-		return "-- left";
+		return "--";
 	}
 
-	return `${Math.round(clampPercent(valueLeft))}% left`;
+	return `${Math.round(clampPercent(valueLeft))}%`;
+}
+
+function formatLeftPercentPair(usage: UsageSnapshot): string {
+	return `${formatPercentValue(usage.fiveHourLeftPercent)}/${formatPercentValue(usage.weeklyLeftPercent)} left`;
 }
 
 function isSparkModel(modelId: string | undefined): boolean {
@@ -63,7 +69,7 @@ function getStatusLabel(modelId: string | undefined): string {
 }
 
 function formatStatus(ctx: ExtensionContext, usage: UsageSnapshot, modelId: string | undefined): string {
-	const text = `${getStatusLabel(modelId)} ${formatLeftPercent(usage.fiveHourLeftPercent)}`;
+	const text = `${getStatusLabel(modelId)} ${formatLeftPercentPair(usage)}`;
 	return ctx.ui.theme.fg("dim", text);
 }
 
@@ -158,10 +164,13 @@ function selectRateLimitBucket(data: CodexUsageResponse, modelId: string | undef
 function parseUsageSnapshot(data: CodexUsageResponse, modelId: string | undefined): UsageSnapshot {
 	const selectedBucket = selectRateLimitBucket(data, modelId);
 	const fiveHourWindow = selectedBucket?.primary_window;
+	const weeklyWindow = selectedBucket?.secondary_window;
 	const fiveHourValue = fiveHourWindow?.used_percent;
+	const weeklyValue = weeklyWindow?.used_percent;
 
 	return {
 		fiveHourLeftPercent: usedToLeftPercent(fiveHourValue),
+		weeklyLeftPercent: usedToLeftPercent(weeklyValue),
 	};
 }
 
