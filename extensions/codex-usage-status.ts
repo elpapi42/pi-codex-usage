@@ -56,8 +56,8 @@ function formatPercentValue(valueLeft: number | null): string {
 	return `${Math.round(clampPercent(valueLeft))}%`;
 }
 
-function formatLeftPercentPair(usage: UsageSnapshot): string {
-	return `${formatPercentValue(usage.fiveHourLeftPercent)}/${formatPercentValue(usage.weeklyLeftPercent)} left`;
+function formatWeeklyLeftPercent(usage: UsageSnapshot): string {
+	return `${formatPercentValue(usage.weeklyLeftPercent)} left`;
 }
 
 function isSparkModel(modelId: string | undefined): boolean {
@@ -69,7 +69,7 @@ function getStatusLabel(modelId: string | undefined): string {
 }
 
 function formatStatus(ctx: ExtensionContext, usage: UsageSnapshot, modelId: string | undefined): string {
-	const text = `${getStatusLabel(modelId)} ${formatLeftPercentPair(usage)}`;
+	const text = `${getStatusLabel(modelId)} ${formatWeeklyLeftPercent(usage)}`;
 	return ctx.ui.theme.fg("dim", text);
 }
 
