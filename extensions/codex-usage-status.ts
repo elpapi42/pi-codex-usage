@@ -5,6 +5,7 @@ import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-age
 
 type UsageWindow = {
 	used_percent?: number | null;
+	limit_window_seconds?: number | null;
 };
 
 type RateLimitBucket = {
@@ -20,7 +21,6 @@ type CodexUsageResponse = {
 };
 
 type UsageSnapshot = {
-	fiveHourLeftPercent: number | null;
 	weeklyLeftPercent: number | null;
 };
 
@@ -32,6 +32,7 @@ const AUTH_FILE = path.join(AGENT_DIR, "auth.json");
 
 const USAGE_URL = "https://chatgpt.com/backend-api/wham/usage";
 const REFRESH_INTERVAL_MS = 60_000;
+const WEEKLY_WINDOW_SECONDS = 604_800;
 
 const CODEX_LABEL = "codex";
 const CODEX_SPARK_LABEL = "codex spark";
@@ -161,16 +162,18 @@ function selectRateLimitBucket(data: CodexUsageResponse, modelId: string | undef
 	return normalizeRateLimitBucket(data.rate_limit);
 }
 
+function selectWeeklyWindow(bucket: RateLimitBucket | null): UsageWindow | null | undefined {
+	const windows = [bucket?.primary_window, bucket?.secondary_window];
+	return windows.find((window) => window?.limit_window_seconds === WEEKLY_WINDOW_SECONDS)
+		?? bucket?.secondary_window
+		?? bucket?.primary_window;
+}
+
 function parseUsageSnapshot(data: CodexUsageResponse, modelId: string | undefined): UsageSnapshot {
-	const selectedBucket = selectRateLimitBucket(data, modelId);
-	const fiveHourWindow = selectedBucket?.primary_window;
-	const weeklyWindow = selectedBucket?.secondary_window;
-	const fiveHourValue = fiveHourWindow?.used_percent;
-	const weeklyValue = weeklyWindow?.used_percent;
+	const weeklyWindow = selectWeeklyWindow(selectRateLimitBucket(data, modelId));
 
 	return {
-		fiveHourLeftPercent: usedToLeftPercent(fiveHourValue),
-		weeklyLeftPercent: usedToLeftPercent(weeklyValue),
+		weeklyLeftPercent: usedToLeftPercent(weeklyWindow?.used_percent),
 	};
 }
 
